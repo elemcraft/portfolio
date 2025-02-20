@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chivalry Jump</title>
+  <style>
+    /* Styles inspired by your original Chivalry Jump.md/Chivalry Jump.html */
+    html {
+      -webkit-print-color-adjust: exact;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    body {
+      margin: 2em auto;
+      max-width: 900px;
+      color: rgb(55, 53, 47);
+      font-family: sans-serif;
+    }
+    h1, h2, h3 {
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      font-weight: 600;
+      margin-bottom: 0;
+    }
+    h1 {
+      font-size: 1.875rem;
+      margin-top: 1.875rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    h3 {
+      font-size: 1.25rem;
+      margin-top: 1.25rem;
+    }
+    
+    /* Simple container style for each embedded graph */
+    .graph-container {
+      max-width: 600px;
+      margin: 1em auto;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      background: #fafafa;
+      padding: 10px;
+    }
+    .graph-title {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 0.5em;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+    .controls label {
+      font-weight: 500;
+    }
+    input[type="range"] {
+      width: 100%;
+      margin: 0;
+    }
+  </style>
+
+  <!-- Only load Plotly once -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+<h1>Chivalry Jump</h1>
+
+<h1>Highlights</h1>
+<ol>
+  <li>Inspired by the <strong>forward process of diffusion model</strong> to utilize
+    <strong>Markov process</strong> to sample from a <strong>bimodal truncated gaussian distribution</strong>
+    with <strong>Abramowitz &amp; Stegun Approximation</strong> and <strong>Winitzki Approximation</strong>
+    and <strong>Box Muller Transform</strong>
+  </li>
+  <li>Utilizes an <strong>adaptive Bernoulli trial</strong> mechanism, guided by the
+    <strong>convex properties</strong> of the exponential function, to regulate the frequency of treasure
+    appearances on platforms.
+  </li>
+  <li>Designed a <strong>custom linked list</strong> supporting <strong>queue operations</strong>
+    (add first, remove last) in <strong>constant time</strong> by caching the tail, eliminating
+    the need for a doubly linked list, while ensuring proper node deletion to
+    <strong>prevent memory leaks</strong>.
+  </li>
+  <li>Utilized <strong>inverse trigonometric functions</strong> to convert raw accelerometer data
+    into angular measurements. Applied a <strong>power function filter</strong> (power &gt; 1) to suppress
+    minor inputs, reducing unintentional movements.
+  </li>
+  <li>Adding a <strong>mutex lock</strong> ensures the safe calculation of the threshold probability
+    for the treasure spawn rate, preventing race conditions.
+  </li>
+  <li>Designed a <strong>unified state machine</strong> to manage player interactions
+    and platforms movement.
+  </li>
+</ol>
+
+<h1>Markov Process-Based Platform Generation</h1>
+
+<h2>Gaussian Distribution🚫</h2>
+<p>
+  The initial design is using a <strong>Gaussian distribution</strong> to determine
+  platform placement, with the <strong>mean</strong> set at the position of the
+  previous platform. The <strong>variance</strong> is systematically increased through
+  a predefined process to progressively enhance the game’s difficulty over time.
+  Using Box Muller transform to sample from standard gaussian distribution then later
+  <strong>shifted and scaled</strong> based on the desired mean and variance to fit the intended distribution.
+</p>
+
+<p>
+  <em>
+    Sampling from a Gaussian distribution can occasionally produce extreme values,
+    causing platforms to spawn outside the viewport.
+  </em>
+</p>
+
+<!-- MERGED: gaussian_graph.html -->
+<div class="graph-container">
+  <div class="graph-title">Gaussian Distribution</div>
+  <div id="gaussian"></div>
+  <div class="controls">
+    <label>Mean: <span id="mean1Val">0</span></label>
+    <input type="range" id="mean1" min="-5" max="5" step="0.1" value="0"
+           oninput="document.getElementById('mean1Val').innerText = this.value">
+    <label>Variance: <span id="variance1Val">1</span></label>
+    <input type="range" id="variance1" min="0.5" max="5" step="0.1" value="1"
+           oninput="document.getElementById('variance1Val').innerText = this.value">
+  </div>
+</div>
+<script>
+  function gaussianPDF(x, mean, variance) {
+    return (1 / Math.sqrt(2 * Math.PI * variance)) * 
+           Math.exp(-Math.pow(x - mean, 2) / (2 * variance));
+  }
+
+  function updateGaussian() {
+    let mean     = parseFloat(document.getElementById("mean1").value);
+    let variance = parseFloat(document.getElementById("variance1").value);
+    let x = Array.from({ length: 100 }, (_, i) => -5 + (i / 99) * 10);
+    let y = x.map(val => gaussianPDF(val, mean, variance));
+    Plotly.newPlot("gaussian", [{ x, y, type: "scatter" }], 
+      { margin: { t: 10, b: 30, l: 40, r: 10 } }
+    );
+  }
+
+  document.querySelectorAll("#mean1, #variance1")
+          .forEach(input => input.addEventListener("input", updateGaussian));
+  updateGaussian();
+</script>
+<!-- END gaussian_graph.html -->
+
+<h2>Clipped Gaussian Distribution⚠️</h2>
+<p>
+  Values that fall outside the desired range are clipped to the nearest boundary,
+  resulting in an accumulation of probability mass at the edges. This effect becomes
+  particularly noticeable when the previous platform’s position is near the viewport boundary.
+</p>
+
+<h2>Rejection Sampling⚠️</h2>
+<p>
+  If a sampled value falls outside the desired range, it is discarded and a new sample
+  is drawn, repeating the process until a valid sample is obtained. While rejection
+  sampling is straightforward to implement, the sampling process is no longer
+  a constant-time operation.
+</p>
+
+<h2>Truncated Gaussian Distribution⚠️</h2>
+<p>
+  Use the <strong>inverse cumulative distribution function</strong> to sample from a truncated
+  Gaussian distribution. Since the Gaussian CDF is intractable, express it in terms
+  of the error function and apply an approximation for efficient computation.
+</p>
+<p>
+  While the truncated Gaussian distribution is effective in mathematical and programming
+  contexts, it tends to generate positions close to the previous platform,
+  which may not be ideal for game design.
+</p>
+
+<h2>Bimodal Truncated Gaussian Distribution✅</h2>
+<p>
+  To reduce the likelihood of consecutive platforms appearing in the same position,
+  employ a <strong>bimodal truncated Gaussian distribution</strong> to determine each
+  new platform’s location. The weighting of the two Gaussian components is dynamically
+  adjusted based on the previous platform’s position.
+</p>
+
+<!-- MERGED: bimodal_gaussian_graph.html -->
+<div class="graph-container">
+  <div class="graph-title">Bimodal Gaussian Distribution</div>
+  <div id="bimodal_gaussian"></div>
+  <div class="controls">
+    <label>Center: <span id="centerVal">0</span></label>
+    <input type="range" id="center" min="-4" max="4" step="0.1" value="0"
+           oninput="document.getElementById('centerVal').innerText = this.value">
+    <label>Distance: <span id="distanceVal">2</span></label>
+    <input type="range" id="distance" min="0" max="3" step="0.1" value="2"
+           oninput="document.getElementById('distanceVal').innerText = this.value">
+    <label>Variance: <span id="varianceVal">1</span></label>
+    <input type="range" id="variance" min="0.5" max="5" step="0.1" value="1"
+           oninput="document.getElementById('varianceVal').innerText = this.value">
+  </div>
+</div>
+<script>
+  function gaussianPDF_bimodal(x, mean, variance) {
+    return (1 / Math.sqrt(2 * Math.PI * variance)) *
+           Math.exp(-(Math.pow(x - mean, 2) / (2 * variance)));
+  }
+
+  function updateBimodalGaussian() {
+    let center   = parseFloat(document.getElementById("center").value);
+    let distance = parseFloat(document.getElementById("distance").value);
+    let variance = parseFloat(document.getElementById("variance").value);
+
+    // Example weighting approach
+    let weight1 = (center - (-5)) / 10;
+    let weight2 = 1 - weight1;
+
+    let x = Array.from({ length: 100 }, (_, i) => -8 + (i / 99) * 16);
+    let y = x.map(val => 
+      weight1 * gaussianPDF_bimodal(val, center - distance, variance) +
+      weight2 * gaussianPDF_bimodal(val, center + distance, variance)
+    );
+
+    Plotly.newPlot("bimodal_gaussian", [{ x, y, type: "scatter" }],
+      { margin: { t: 10, b: 30, l: 40, r: 10 } }
+    );
+  }
+
+  document.querySelectorAll("#center, #distance, #variance")
+          .forEach(input => input.addEventListener("input", updateBimodalGaussian));
+  updateBimodalGaussian();
+</script>
+<!-- END bimodal_gaussian_graph.html -->
+
+<h1>Adaptive Bernoulli Trial for Treasure Spawn Rate</h1>
+<p>
+  Employs an <strong>adaptive Bernoulli trial mechanism</strong> to balance the frequency
+  of treasure appearances on platforms. While a simple Bernoulli trial with a fixed success rate
+  could determine treasure spawns, it may lead to clusters of consecutive treasures if the rate
+  is too high, or prolonged absences if too low.
+</p>
+<p>
+  To address this, adjust the success rate dynamically using the <strong>convex</strong>
+  nature of the exponential function. After a treasure spawns, the probability of another
+  immediate spawn is reduced; conversely, each time no treasure spawns, the probability
+  increases exponentially, ensuring a treasure appears eventually.
+</p>
+
+<!-- MERGED: exponential_graph.html -->
+<div class="graph-container">
+  <div class="graph-title">Exponential Function (Spawn Probability)</div>
+  <div id="expGraph"></div>
+  <div class="controls">
+    <label>a: <span id="aVal">0.05</span></label>
+    <input type="range" id="aSlider" min="0.01" max="0.1" step="0.01" value="0.05"
+           oninput="document.getElementById('aVal').innerText = this.value">
+    <label>b: <span id="bVal">0.1</span></label>
+    <input type="range" id="bSlider" min="0.01" max="0.5" step="0.01" value="0.1"
+           oninput="document.getElementById('bVal').innerText = this.value">
+  </div>
+</div>
+<script>
+  function expFunction(x, a, b) {
+    return a * Math.exp(b * x);
+  }
+  function updateExpGraph() {
+    let a = parseFloat(document.getElementById("aSlider").value);
+    let b = parseFloat(document.getElementById("bSlider").value);
+    let x = Array.from({ length: 100 }, (_, i) => (i / 99) * 30);
+    let y = x.map(val => expFunction(val, a, b));
+
+    Plotly.newPlot("expGraph",
+      [{ x, y, type: "scatter", mode: "lines" }],
+      {
+        margin: { t: 10, b: 30, l: 40, r: 10 },
+        xaxis: { title: "x" },
+        yaxis: { title: "y" }
+      }
+    );
+  }
+  document.querySelectorAll("#aSlider, #bSlider")
+          .forEach(input => input.addEventListener("input", updateExpGraph));
+  updateExpGraph();
+</script>
+<!-- END exponential_graph.html -->
+
+<h1>Trigonometric Tilt Detection and Noise Filtering</h1>
+<p>
+  To determine the tilt angle from accelerometer data, our game utilizes <strong>inverse trigonometric functions</strong>
+  to convert raw accelerometer readings into angular measurements.
+</p>
+<p>
+  To reduce unintentional movements, a <strong>power function filter</strong> is applied by raising the input
+  values to a power &gt; 1 to decrease the impact of minor inputs.
+</p>
+
+<!-- MERGED: power_function_graph.html -->
+<div class="graph-container">
+  <div class="graph-title">Power Function Filter</div>
+  <div id="powerFunction"></div>
+  <div class="controls">
+    <label>Exponent (n): <span id="exponentVal">2</span></label>
+    <input type="range" id="exponent" min="1" max="5" step="0.1" value="2"
+           oninput="document.getElementById('exponentVal').innerText = this.value">
+  </div>
+</div>
+<script>
+  function updatePowerFunction() {
+    let n = parseFloat(document.getElementById("exponent").value);
+    let x = Array.from({ length: 100 }, (_, i) => -5 + (i / 99) * 10);
+    let y = x.map(val => Math.sign(val) * Math.pow(Math.abs(val), n));
+    Plotly.newPlot("powerFunction", [{ x, y, type: "scatter" }],
+      { margin: { t: 10, b: 30, l: 40, r: 10 } }
+    );
+  }
+  document.getElementById("exponent").addEventListener("input", updatePowerFunction);
+  updatePowerFunction();
+</script>
+<!-- END power_function_graph.html -->
+
+<h1>Unified State Machine</h1>
+<p>
+  Using a state machine, I initially designed a simple version with only three states.
+</p>
+<p><img src="State_Machine_1.png" alt="State Machine 1" style="max-width:60%; height:auto;" /></p>
+<p>
+  I then expanded it by adding an additional state to handle scenarios where the player is not in the game,
+  enabling the implementation of a restart function.
+</p>
+<p><img src="State_Machine_2.png" alt="State Machine 2" style="max-width:60%; height:auto;" /></p>
+<p>
+  Later, I refined the system by merging the newly added states to seamlessly accommodate the player's ability
+  to pick up boosts. Additionally, the structured nature of the state machine makes debugging more manageable.
+</p>
+<p><img src="State_Machine_3.png" alt="State Machine 3" style="max-width:80%; height:auto;" /></p>
+
+</body>
+</html>
