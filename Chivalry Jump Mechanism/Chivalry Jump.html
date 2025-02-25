@@ -70,13 +70,52 @@
       margin: 0;
     }
   </style>
+  <style>
+    .image-container {
+      text-align: center;
+    }
+    .image-container img {
+      display: inline-block;
+    }
+  </style>
 
-  <!-- Only load Plotly once -->
+  <!-- Load Plotly -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <!-- Load MathJax -->
+  <script type="text/javascript" async
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML">
+  </script>
 </head>
 <body>
 
 <h1>Chivalry Jump</h1>
+<h1>Google Play Link</h1>
+<p class="image-container">
+  <img src="Play_Store_Listing.png" alt="State Machine 1" style="max-width:80%; height:auto;" />
+</p>
+<ul>
+  <li>
+    <a href="https://groups.google.com/g/chivalryjump" target="_blank">
+      Join the Closed Testing Group
+    </a>
+      [Required to access the game]
+    </li>
+    <li>Download and Play:</li>
+  <ul>
+    <li>
+      <a href="https://play.google.com/store/apps/details?id=com.zackchi.markovianstairs" target="_blank">
+        Join on Android
+      </a>
+    </li>
+    <li>
+      <a href="https://play.google.com/apps/testing/com.zackchi.markovianstairs" target="_blank">
+        Join on the web
+      </a>
+    </li>
+  </ul>
+</ul>
+  
 
 <h1>Highlights</h1>
 <ol>
@@ -116,6 +155,18 @@
   a predefined process to progressively enhance the game’s difficulty over time.
   Using Box Muller transform to sample from standard gaussian distribution then later
   <strong>shifted and scaled</strong> based on the desired mean and variance to fit the intended distribution.
+</p>
+
+<p>
+\[
+Z_0 = \sqrt{-2 \ln U_1} \cdot \cos(2\pi U_2) 
+\\
+Z_1 = \sqrt{-2 \ln U_1} \cdot \sin(2\pi U_2)
+\]
+</p>
+
+<p>
+  where \(U_1\) and \(U_2\) are independent random variables uniformly distributed over the interval \((0,1)\)
 </p>
 
 <p>
@@ -163,16 +214,16 @@
 <h2>Clipped Gaussian Distribution⚠️</h2>
 <p>
   Values that fall outside the desired range are clipped to the nearest boundary,
-  resulting in an accumulation of probability mass at the edges. This effect becomes
-  particularly noticeable when the previous platform’s position is near the viewport boundary.
+  resulting in <em>an accumulation of probability mass at the edges</em>. This effect becomes
+  particularly noticeable when the previous platform's position is near the viewport boundary.
 </p>
 
 <h2>Rejection Sampling⚠️</h2>
 <p>
   If a sampled value falls outside the desired range, it is discarded and a new sample
   is drawn, repeating the process until a valid sample is obtained. While rejection
-  sampling is straightforward to implement, the sampling process is no longer
-  a constant-time operation.
+  sampling is straightforward to implement, the sampling process is <em>no longer
+  a constant-time operation</em>.
 </p>
 
 <h2>Truncated Gaussian Distribution⚠️</h2>
@@ -186,13 +237,77 @@
   contexts, it tends to generate positions close to the previous platform,
   which may not be ideal for game design.
 </p>
+<p>
+\[
+\begin{align*}
+\Phi(0,1;x) &= \int_{-\infty}^{x} \frac{1}{\sqrt{2\pi}} e^{-\frac{t^2}{2}} \, dt \\
+
+&= \int_{-\infty}^{0} \frac{1}{\sqrt{2\pi}} e^{-\frac{t^2}{2}} \, dt + \int_{0}^{x} \frac{1}{\sqrt{2\pi}} e^{-\frac{t^2}{2}} \, dt \\
+
+&= \frac{1}{2} + \frac{1}{\sqrt{2\pi}} \int_{0}^{x} e^{-\frac{t^2}{2}} \, dt \\
+
+&= \frac{1}{2} + \frac{1}{\sqrt{2\pi}} \cdot \frac{1}{2} \int_{-x}^{x} e^{-\frac{t^2}{2}} \, dt \\
+
+&= \frac{1}{2} + \frac{1}{\sqrt{\pi}} \cdot \frac{1}{2} \int_{-\frac{x}{\sqrt{2}}}^{\frac{x}{\sqrt{2}}} e^{-u^2} \, du \\
+
+&= \frac{1}{2} + \frac{1}{2} \operatorname{erf} \left(\frac{x}{\sqrt{2}} \right)
+\end{align*}
+\]
+</p>
+<p>where \(\operatorname{erf}(x) = \frac{1}{\sqrt{\pi}} \int_{-x}^{x} e^{-t^2} \, dt\)</p>
+
+<h3>Approximate the Error Function</h3>
+<ol>
+  <li><strong>Maclaurin Series</strong> 🚫: Accurate only near zero, but ineffective for larger values 
+    since screen widths typically span hundreds of pixels.
+  </li>
+  <li><strong>Taylor Series</strong> ⚠️: Requires storing numerous reference points, making it less flexible.
+  </li>
+  <li><strong>Abramowitz & Stegun Approximation</strong> ✅: Provides a constant-time and constant-space 
+    approximation of the error function.
+  </li>
+</ol>
+
+<h3>Approximate the Inverse Error Function</h3>
+<ul>
+  <li><strong>Winitzki Approximation</strong> ✅: Provides a constant-time and constant-space 
+    approximation of the inverse error function.
+  </li>
+</ul>
+
+<p>
+  Use the CDF to determine the cumulative probabilities for the minimum and maximum values. 
+  Then, draw a sample from a uniform distribution within this range. Finally, apply the inverse CDF 
+  to map the uniform sample back to the input space of a truncated Gaussian distribution.
+</p>
+
+<p>
+  While the truncated Gaussian distribution is effective in mathematical and programming contexts, 
+  it tends to <em>generate positions close to the previous platform, 
+  which is not be ideal for game design.</em>
+</p>
 
 <h2>Bimodal Truncated Gaussian Distribution✅</h2>
 <p>
   To reduce the likelihood of consecutive platforms appearing in the same position,
   employ a <strong>bimodal truncated Gaussian distribution</strong> to determine each
-  new platform’s location. The weighting of the two Gaussian components is dynamically
-  adjusted based on the previous platform’s position.
+  new platform's location. The weighting of the two Gaussian components is dynamically
+  adjusted based on the previous platform's position.
+</p>
+
+<p>
+  For instance:
+    <ul>
+      <li>
+        If the previous platform is centered on the screen, 
+        both the left and right Gaussian components are equally weighted.
+      </li>
+      <li>
+        If the previous platform is positioned at the first quartile from the left edge, 
+        the left Gaussian is assigned a weight of 25%, 
+        while the right Gaussian receives a 75% weight.
+      </li>
+    </ul>
 </p>
 
 <!-- MERGED: bimodal_gaussian_graph.html -->
@@ -255,6 +370,16 @@
   nature of the exponential function. After a treasure spawns, the probability of another
   immediate spawn is reduced; conversely, each time no treasure spawns, the probability
   increases exponentially, ensuring a treasure appears eventually.
+</p>
+<p>
+\[
+y = a \cdot e^{b \cdot x}
+\]
+</p>
+<p>
+  To ensure that each platform's treasure spawn rate is calculated independently, 
+  even in a parallel environment, use a <strong>mutex lock</strong> to synchronize access to the static variable \(x\), 
+  which stores the distance from the previous treasure's spawn location.
 </p>
 
 <!-- MERGED: exponential_graph.html -->
@@ -333,17 +458,23 @@
 <p>
   Using a state machine, I initially designed a simple version with only three states.
 </p>
-<p><img src="State_Machine_1.png" alt="State Machine 1" style="max-width:60%; height:auto;" /></p>
+<p class="image-container">
+  <img src="State_Machine_1.png" alt="State Machine 1" style="max-width:40%; height:auto;" />
+</p>
 <p>
   I then expanded it by adding an additional state to handle scenarios where the player is not in the game,
   enabling the implementation of a restart function.
 </p>
-<p><img src="State_Machine_2.png" alt="State Machine 2" style="max-width:60%; height:auto;" /></p>
+<p class="image-container">
+  <img src="State_Machine_2.png" alt="State Machine 2" style="max-width:40%; height:auto;" />
+</p>
 <p>
   Later, I refined the system by merging the newly added states to seamlessly accommodate the player's ability
   to pick up boosts. Additionally, the structured nature of the state machine makes debugging more manageable.
 </p>
-<p><img src="State_Machine_3.png" alt="State Machine 3" style="max-width:80%; height:auto;" /></p>
+<p class="image-container">
+  <img src="State_Machine_3.png" alt="State Machine 3" style="max-width:80%; height:auto;" />
+</p>
 
 </body>
 </html>
