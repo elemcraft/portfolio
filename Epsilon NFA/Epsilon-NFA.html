@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Epsilon-NFA</title>
+  <style>
+    html {
+      -webkit-print-color-adjust: exact;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+    body {
+      margin: 2em auto;
+      max-width: 900px;
+      color: rgb(55, 53, 47);
+      font-family: sans-serif;
+    }
+    h1, h2, h3 {
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      font-weight: 600;
+      margin-bottom: 0;
+    }
+    h1 {
+      font-size: 1.875rem;
+      margin-top: 1.875rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    h3 {
+      font-size: 1.25rem;
+      margin-top: 1.25rem;
+    }
+    .image-container {
+      text-align: center;
+    }
+    .image-container img {
+      display: inline-block;
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+  <!-- Load MathJax -->
+  <script type="text/javascript" async
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML">
+  </script>
+</head>
+<body>
+
+<h1>Regular Expression Parser</h1>
+
+<h2>Features</h2>
+<ul>
+  <li>Implement an <strong>epsilon non-deterministic finite state automaton (ε-NFA)</strong> as the core component of the regular expression parser.</li>
+  <li>Utilize <strong>depth first search</strong> algorithm to retrieve all states within the epsilon closure of the current state and 
+    construct the transition table for the input regular expression.</li>
+  <li>Incorporate <strong>stack-based</strong> checking to verify balanced brackets within the input regular expression.</li>
+</ul>
+
+<h2>Environment</h2>
+<ul>
+  <li>Java Version: JDK 11</li>
+  <li>External Libraries: Test code would be run using <strong>JUnit 4</strong></li>
+</ul>
+
+<h2>Outline</h2>
+<ol>
+  <li>Read in the regular expression</li>
+  <li>Check the validity of the input regular expression and throw an exception if invalid</li>
+  <li>Transform the regular expression from infix to postfix</li>
+  <li>Build the ε-NFA</li>
+  <li>Put the testing string into the ε-NFA built from the regex</li>
+</ol>
+
+<h2>NFA Building Blocks</h2>
+
+<h3>1. Epsilon Block</h3>
+<p class="image-container">
+   <img src="Epsilon Block.png" alt="Epsilon Block" style="max-width:50%; height:auto;">
+</p>
+
+<h3>2. Symbol Block</h3>
+<p class="image-container">
+   <img src="Symbol Block.png" alt="Symbol Block" style="max-width:50%; height:auto;">
+</p>
+
+<h3>3. Union Block</h3>
+<p class="image-container">
+   <img src="Union Block.png" alt="Union Block" style="max-width:50%; height:auto;">
+</p>
+
+<h3>4. Concatenation Block</h3>
+<p class="image-container">
+   <img src="Concatenation Block.png" alt="Concatenation Block" style="max-width:50%; height:auto;">
+</p>
+
+<h3>5. Repetition Block (Kleene Star)</h3>
+<p class="image-container">
+   <img src="Repetition Block.png" alt="Repetition Block" style="max-width:50%; height:auto;">
+</p>
+
+<h3>6. One Or More Block (Kleene Plus)</h3>
+<p class="image-container">
+   <img src="One Or More Block.png" alt="One Or More Block" style="max-width:50%; height:auto;">
+</p>
+
+<h2>Input</h2>
+<p>A regular expression can consist of:</p>
+<ul>
+  <li>Symbols: lowercase and uppercase letters, numbers, spaces</li>
+  <li>Operators: the alternation operator <code>|</code>, the Kleene star <code>*</code> and Kleene plus operators <code>+</code>, as well as brackets <code>(</code> and <code>)</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>Regular Expression = \((a^+|b)(a^*|c)\)</p>
+<p class="image-container">
+   <img src="Regex Example.png" alt="Regex Example" style="max-width:70%; height:auto;">
+</p>
+
+<h2>Verbose Mode Example</h2>
+<p>Regular Expression = \((a^+|b)(a^*|c)\)</p>
+<p class="image-container">
+   <img src="Verbose Mode Example.png" alt="Verbose Mode Example" style="max-width:70%; height:auto;">
+</p>
+
+<h2>Example Diagram</h2>
+<p>1. Omit epsilon transition symbol for simplicity</p>
+<p>2. Turn symbol transition red for readability</p>
+<p class="image-container">
+   <img src="Example Diagram.png" alt="Example Diagram" style="max-width:80%; height:auto;">
+</p>
+
+<h2>Reference</h2>
+<p><a href="https://deniskyashif.com/2019/02/17/implementing-a-regular-expression-engine/" target="_blank">Denis Kyashif's Blog</a></p>
+
+<h2>Future Improvement</h2>
+<p>Currently, the ε-NFA interprets the <code>.</code> character as the concatenation symbol. Adding a function to handle dot symbols with an escape character can resolve this issue.</p>
+
+</body>
+</html>
